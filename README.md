@@ -1,10 +1,10 @@
 # Frontend Slides
 
-A Claude Code skill for creating stunning, animation-rich HTML presentations — from scratch or by converting PowerPoint files.
+A Claude Code skill for creating stunning, animation-rich presentations from a shared deck model, then exporting them to HTML first and later to PDF/PPTX.
 
 ## What This Does
 
-**Frontend Slides** helps non-designers create beautiful web presentations without knowing CSS or JavaScript. It uses a "show, don't tell" approach: instead of asking you to describe your aesthetic preferences in words, it generates visual previews and lets you pick what you like.
+**Frontend Slides** helps non-designers create beautiful presentations without knowing CSS or JavaScript. It uses a "show, don't tell" approach: instead of asking you to describe your aesthetic preferences in words, it generates visual previews and lets you pick what you like.
 
 Here is a deck about the skill, made through the skill:
 
@@ -13,9 +13,11 @@ https://github.com/user-attachments/assets/ef57333e-f879-432a-afb9-180388982478
 
 ### Key Features
 
-- **Zero Dependencies** — Single HTML files with inline CSS/JS. No npm, no build tools, no frameworks.
+- **Canonical Deck Model** — Build `deck.json` once, then render multiple outputs from the same source.
+- **HTML First** — Single HTML files with inline CSS/JS remain the primary output.
 - **Visual Style Discovery** — Can't articulate design preferences? No problem. Pick from generated visual previews.
 - **PPT Conversion** — Convert existing PowerPoint files to web, preserving all images and content.
+- **Print-Safe HTML** — HTML exporter includes print CSS so PDF export does not depend on viewport capture.
 - **Anti-AI-Slop** — Curated distinctive styles that avoid generic AI aesthetics (bye-bye, purple gradients on white).
 - **Production Quality** — Accessible, responsive, well-commented code you can customize.
 
@@ -95,18 +97,94 @@ The skill will:
 
 ## Architecture
 
-This skill uses **progressive disclosure** — the main `SKILL.md` is a concise map (~180 lines), with supporting files loaded on-demand only when needed:
+This skill now uses two layers:
+
+1. **Deck model** — a canonical `deck.json` with slides, elements, layout, and theme
+2. **Exporters** — HTML now, PDF/PPTX next
+
+This skill still uses **progressive disclosure** — the main `SKILL.md` is a concise map, with supporting files loaded on-demand only when needed:
 
 | File | Purpose | Loaded When |
 |------|---------|-------------|
 | `SKILL.md` | Core workflow and rules | Always (skill invocation) |
+| `references/deck-schema.md` | Canonical multi-format slide structure | Phase 3 |
 | `STYLE_PRESETS.md` | 12 curated visual presets | Phase 2 (style selection) |
 | `viewport-base.css` | Mandatory responsive CSS | Phase 3 (generation) |
 | `html-template.md` | HTML structure and JS features | Phase 3 (generation) |
 | `animation-patterns.md` | CSS/JS animation reference | Phase 3 (generation) |
+| `scripts/build-deck.js` | Normalize source slides into `deck.json` | Phase 3 / Phase 4 |
+| `scripts/export-html.js` | Render HTML from `deck.json` | Phase 3 / Phase 5 |
+| `scripts/export-pdf.js` | Export PDF from print-safe HTML via headless Chrome | Phase 5 |
+| `scripts/export-pptx.js` | Export editable PPTX from `deck.json` | Phase 5 |
 | `scripts/extract-pptx.py` | PPT content extraction | Phase 4 (conversion) |
 
 This design follows [OpenAI's harness engineering](https://openai.com/index/harness-engineering/) principle: "give the agent a map, not a 1,000-page instruction manual."
+
+## Current Multi-Format Strategy
+
+### Stage 1
+
+- Generate `deck.json`
+- Export HTML from `deck.json`
+- Make exported HTML print-safe for PDF
+
+### Stage 2
+
+- Add a dedicated PDF exporter, ideally Chromium/Playwright based
+
+Current script:
+
+```bash
+node scripts/export-pdf.js presentation.html presentation.pdf
+```
+
+This exporter:
+
+- starts a temporary local static server beside the HTML file
+- loads the deck through local HTTP so relative assets resolve correctly
+- uses headless Chrome print mode instead of viewport capture
+- preserves one slide per PDF page when the HTML includes print CSS
+
+### Stage 3
+
+- Add a PPTX exporter that maps deck elements to editable text boxes, images, lines, and shapes
+
+Current script:
+
+```bash
+node scripts/export-pptx.js presentation/deck.json presentation/deck.pptx
+```
+
+Current editable coverage:
+
+- text boxes
+- images
+- basic rectangles
+- rounded rectangles
+- ellipses
+- lines
+
+## Why Browser PDF Export Often Fails For Slide HTML
+
+Screen-first slide HTML usually relies on:
+
+- `height: 100vh`
+- `overflow: hidden`
+- `scroll-snap-type`
+- fixed nav or progress overlays
+
+That works well on screen, but many browser and app exporters treat the page as a live viewport instead of a paginated document. The result is often:
+
+- only the current slide is captured
+- slide breaks are ignored
+- fixed UI repeats on every page
+
+The fix is not "click export differently." The fix is to render a print-safe variant:
+
+- disable scroll-snap in print
+- hide fixed UI in print
+- force each slide to `break-after: page`
+- use explicit print page dimensions for 16:9 slides
 
 ## Philosophy
 

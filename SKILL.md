@@ -1,15 +1,15 @@
 ---
-name: frontend-slides
+name: frontend-slides-skill
 description: Create stunning, animation-rich HTML presentations from scratch or by converting PowerPoint files. Use when the user wants to build a presentation, convert a PPT/PPTX to web, or create slides for a talk/pitch. Helps non-designers discover their aesthetic through visual exploration rather than abstract choices.
 ---
 
 # Frontend Slides
 
-Create zero-dependency, animation-rich HTML presentations that run entirely in the browser.
+Create animation-rich presentations from a shared deck model, then export them to one or more formats.
 
 ## Core Principles
 
-1. **Zero Dependencies** — Single HTML files with inline CSS/JS. No npm, no build tools.
+1. **Single Source of Truth** — Build `deck.json` first, then export `HTML`, `PDF`, and `PPTX` from the same slide model.
 2. **Show, Don't Tell** — Generate visual previews, not abstract choices. People discover what they want by seeing it.
 3. **Distinctive Design** — No generic "AI slop." Every presentation must feel custom-crafted.
 4. **Viewport Fitting (NON-NEGOTIABLE)** — Every slide MUST fit exactly within 100vh. No scrolling within slides, ever. Content overflows? Split into multiple slides.
@@ -103,6 +103,14 @@ Do you need to edit text directly in the browser after generation? Options:
 
 **Remember the user's editing choice — it determines whether edit-related code is included in Phase 3.**
 
+**Question 5 — Output Format** (header: "Output"):
+What formats do you need? Options:
+- "HTML only" — fastest path, screen-first
+- "HTML + PDF" — print-safe web deck plus PDF export
+- "HTML + PDF + PPTX" — multi-format delivery, PPTX must stay editable
+
+**Remember the user's format choice — it determines whether you must keep the layout within PPTX-safe limits.**
+
 If user has content, ask them to share it.
 
 ### Step 1.2: Image Evaluation (if images provided)
@@ -165,23 +173,65 @@ If "Mix elements", ask for specifics.
 
 ---
 
-## Phase 3: Generate Presentation
+## Phase 3: Build Deck Model and Export HTML
+
+Generate the presentation in two layers:
+
+1. Build `deck.json` as the canonical slide model
+2. Export the requested formats from that deck
 
 Generate the full presentation using content from Phase 1 (text, or text + curated images) and style from Phase 2.
 
 If images were provided, the slide outline already incorporates them from Step 1.2. If not, CSS-generated visuals (gradients, shapes, patterns) provide visual interest — this is a fully supported first-class path.
 
 **Before generating, read these supporting files:**
+- [references/deck-schema.md](references/deck-schema.md) — canonical `deck.json` structure
 - [html-template.md](html-template.md) — HTML architecture and JS features
 - [viewport-base.css](viewport-base.css) — Mandatory CSS (include in full)
 - [animation-patterns.md](animation-patterns.md) — Animation reference for the chosen feeling
 
 **Key requirements:**
+- Always save a structured `deck.json` before rendering HTML
 - Single self-contained HTML file, all CSS/JS inline
 - Include the FULL contents of viewport-base.css in the `<style>` block
 - Use fonts from Fontshare or Google Fonts — never system fonts
 - Add detailed comments explaining each section
 - Every section needs a clear `/* === SECTION NAME === */` comment block
+- If PDF is requested, the HTML must include print CSS:
+  - Hide fixed UI in print
+  - Disable scroll-snap in print
+  - Force one slide per printed page with `break-after: page`
+  - Replace `100vh` screen-only constraints with print-safe page dimensions
+- If export controls appear inside the HTML:
+  - They must be low-visibility by default
+  - Use a hidden edge handle or similarly quiet affordance
+  - Do not let export UI sit visibly over slide content during normal browsing
+- If PPTX is requested, keep all essential meaning in editable primitives:
+  - text boxes
+  - images
+  - simple shapes and lines
+  - simple tables
+
+**Preferred script path when you need reproducible files:**
+- `node scripts/build-deck.js <input.json> <output/deck.json>`
+- `node scripts/export-html.js <output/deck.json> <output/presentation.html>`
+- `node scripts/export-pdf.js <output/presentation.html> <output/presentation.pdf>`
+- `node scripts/export-pptx.js <output/deck.json> <output/presentation.pptx>`
+
+### Important PDF Warning
+
+Do NOT rely on browser "smart export current page" behavior for slide decks.
+
+Screen-first slides often use:
+
+- `.slide { height: 100vh; overflow: hidden; }`
+- `scroll-snap-type`
+- fixed progress bars and nav dots
+- viewport-relative positioning
+
+Without print CSS, many exporters capture only the visible viewport or paginate unpredictably.
+
+If the user needs PDF, generate a print-safe HTML variant or a dedicated PDF export path.
 
 ---
 
@@ -192,7 +242,8 @@ When converting PowerPoint files:
 1. **Extract content** — Run `python scripts/extract-pptx.py <input.pptx> <output_dir>` (install python-pptx if needed: `pip install python-pptx`)
 2. **Confirm with user** — Present extracted slide titles, content summaries, and image counts
 3. **Style selection** — Proceed to Phase 2 for style discovery
-4. **Generate HTML** — Convert to chosen style, preserving all text, images (from assets/), slide order, and speaker notes (as HTML comments)
+4. **Build deck model** — Convert extracted content into `deck.json`, preserving text, images, slide order, and notes
+5. **Export HTML** — Render the chosen style from the same `deck.json`
 
 ---
 
@@ -202,6 +253,8 @@ When converting PowerPoint files:
 2. **Open** — Use `open [filename].html` to launch in browser
 3. **Summarize** — Tell the user:
    - File location, style name, slide count
+   - Whether `deck.json` was saved
+   - Which output formats were produced
    - Navigation: Arrow keys, Space, scroll/swipe, click nav dots
    - How to customize: `:root` CSS variables for colors, font link for typography, `.reveal` class for animations
    - If inline editing was enabled: Hover top-left corner or press E to enter edit mode, click any text to edit, Ctrl+S to save
@@ -212,8 +265,13 @@ When converting PowerPoint files:
 
 | File | Purpose | When to Read |
 |------|---------|-------------|
+| [references/deck-schema.md](references/deck-schema.md) | Canonical deck model for cross-format export | Phase 3 |
 | [STYLE_PRESETS.md](STYLE_PRESETS.md) | 12 curated visual presets with colors, fonts, and signature elements | Phase 2 (style selection) |
 | [viewport-base.css](viewport-base.css) | Mandatory responsive CSS — copy into every presentation | Phase 3 (generation) |
 | [html-template.md](html-template.md) | HTML structure, JS features, code quality standards | Phase 3 (generation) |
 | [animation-patterns.md](animation-patterns.md) | CSS/JS animation snippets and effect-to-feeling guide | Phase 3 (generation) |
+| [scripts/build-deck.js](scripts/build-deck.js) | Normalize slide data into canonical `deck.json` | Phase 3 / Phase 4 |
+| [scripts/export-html.js](scripts/export-html.js) | Render HTML from canonical `deck.json`, including print CSS | Phase 3 / Phase 5 |
+| [scripts/export-pdf.js](scripts/export-pdf.js) | Export multi-page PDF from print-safe HTML using headless Chrome | Phase 5 |
+| [scripts/export-pptx.js](scripts/export-pptx.js) | Export editable PPTX from canonical `deck.json` using semantic slide elements | Phase 5 |
 | [scripts/extract-pptx.py](scripts/extract-pptx.py) | Python script for PPT content extraction | Phase 4 (conversion) |

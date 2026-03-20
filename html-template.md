@@ -171,6 +171,89 @@ Every presentation must include:
    - Export/save file functionality
    - See "Inline Editing Implementation" section below
 
+5. **Export Controls** (only if multi-format output is exposed in the HTML itself):
+   - Must be low-visibility by default
+   - Must not cover important slide content while browsing
+   - Prefer an edge-hidden handle or small floating affordance
+   - Full export panel should appear only on hover, tap, or explicit open state
+   - Must be hidden in print mode
+
+## Print / PDF Requirements
+
+If the user needs PDF output, screen CSS is not enough. Add a print-safe layer.
+
+Why:
+
+- `.slide { height: 100vh; overflow: hidden; }` is screen-first
+- `scroll-snap-type` is screen-first
+- fixed nav dots and progress bars are screen-first
+- some browser or app exporters capture the current viewport instead of paginating the whole deck
+
+Minimum print CSS:
+
+```css
+@media print {
+    @page {
+        size: 13.333in 7.5in;
+        margin: 0;
+    }
+
+    html, body {
+        height: auto !important;
+        overflow: visible !important;
+        scroll-snap-type: none !important;
+        background: white !important;
+    }
+
+    .progress-bar,
+    .nav-dots,
+    .keyboard-hint,
+    .edit-hotzone,
+    .edit-toggle {
+        display: none !important;
+    }
+
+    .slide {
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        break-after: page;
+        page-break-after: always;
+    }
+
+    .slide:last-child {
+        break-after: auto;
+        page-break-after: auto;
+    }
+
+    .reveal {
+        opacity: 1 !important;
+        transform: none !important;
+        filter: none !important;
+    }
+}
+```
+
+If PDF export is important, prefer a dedicated export path over ad hoc browser printing.
+
+## Export UI Requirements
+
+If the HTML includes download/export controls, do not place a full panel on top of content by default.
+
+Preferred behavior:
+
+- hidden edge handle on the left or right edge
+- low-opacity idle state
+- expand only on hover or explicit click
+- collapse on outside click or `Escape`
+- fully hidden in print
+
+Avoid:
+
+- large fixed cards floating over slide content
+- persistent modal-like panels during normal viewing
+- controls that compete visually with the deck itself
+
 ## Inline Editing Implementation (Opt-In Only)
 
 **If the user chose "No" for inline editing in Phase 1, do NOT generate any edit-related HTML, CSS, or JS.**
