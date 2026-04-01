@@ -180,6 +180,24 @@ Generate the presentation in two layers:
 1. Build `deck.json` as the canonical slide model
 2. Export the requested formats from that deck
 
+### Recommended Output Layout
+
+When the user does not specify a custom destination, save generated files under:
+
+```text
+outputs/frontend-slides-skill/<yyyymmdd-内容名>/
+```
+
+Typical files:
+
+- `deck.json`
+- `presentation.html`
+- `presentation.pdf`
+- `presentation.pptx`
+- extracted image/assets folders when needed
+
+This is the recommended default for new work so the skill remains self-contained and does not scatter files in the workspace.
+
 Generate the full presentation using content from Phase 1 (text, or text + curated images) and style from Phase 2.
 
 If images were provided, the slide outline already incorporates them from Step 1.2. If not, CSS-generated visuals (gradients, shapes, patterns) provide visual interest — this is a fully supported first-class path.
@@ -213,10 +231,10 @@ If images were provided, the slide outline already incorporates them from Step 1
   - simple tables
 
 **Preferred script path when you need reproducible files:**
-- `node scripts/build-deck.js <input.json> <output/deck.json>`
-- `node scripts/export-html.js <output/deck.json> <output/presentation.html>`
-- `node scripts/export-pdf.js <output/presentation.html> <output/presentation.pdf>`
-- `node scripts/export-pptx.js <output/deck.json> <output/presentation.pptx>`
+- `node scripts/build-deck.js <input.json> <outputs/frontend-slides-skill/<yyyymmdd-内容名>/deck.json>`
+- `node scripts/export-html.js <outputs/frontend-slides-skill/<yyyymmdd-内容名>/deck.json> <outputs/frontend-slides-skill/<yyyymmdd-内容名>/presentation.html>`
+- `node scripts/export-pdf.js <outputs/frontend-slides-skill/<yyyymmdd-内容名>/presentation.html> <outputs/frontend-slides-skill/<yyyymmdd-内容名>/presentation.pdf>`
+- `node scripts/export-pptx.js <outputs/frontend-slides-skill/<yyyymmdd-内容名>/deck.json> <outputs/frontend-slides-skill/<yyyymmdd-内容名>/presentation.pptx>`
 
 ### Important PDF Warning
 
